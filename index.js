@@ -2,6 +2,9 @@ const express = require("express");
 const router = require("express").Router();
 const mongoose = require("mongoose");
 const axios = require("axios");
+const Redis = require("redis");
+const redisClient = Redis.createClient();
+redisClient.connect().then(() => console.log("Redis ready"));
 
 const photoSchema = mongoose.Schema({
     albumId: {
@@ -31,6 +34,9 @@ mongoose.connect("mongodb://localhost/cs3219-task-e", { useNewUrlParser: true })
 const db = mongoose.connection;
 // Bind connection to error event to get notification of connection errors
 db.on("error", console.error.bind(console, "MongoDB connection error:"));
+Photo.deleteMany({}, () => {
+    console.log("Cleared local db");
+});
 
 // Populate local db with photos from external api
 axios.get("http://jsonplaceholder.typicode.com/photos").then((res) => {
@@ -43,29 +49,23 @@ axios.get("http://jsonplaceholder.typicode.com/photos").then((res) => {
         mongoosePhoto.thumbnailUrl = photo.thumbnailUrl;
         mongoosePhoto.save();
     });
+    console.log("Added 5000 photos to local db");
 });
 
 const port = 8000;
 const app = express();
 app.use(express.json());
 app.get("/", (req, res) => res.send("Redis cache with Express and Mongoose"));
-
-router.get("/", (req, res) => {
-    res.json({
-        message: "CS3219 OTOT Task E",
-    });
+app.use("/api/photos", async (req, res) => {
+    const photos = await redisClient.get("photos");
+    if (photos) {
+        res.json(JSON.parse(photos));
+    } else {
+        const data = await Photo.find({});
+        redisClient.setEx("photos", 3600, JSON.stringify(data));
+        res.json(data);
+    }
 });
-router.get("/photos", (req, res) => {
-    Photo.find((err, photos) => {
-        if (err) return res.send(err);
-
-        res.json({
-            message: "Photos retrieved successfully",
-            data: photos,
-        });
-    });
-});
-app.use("/api", router);
 
 module.exports = app.listen(port, () => {
     console.log(`Running on port ${port}`);
