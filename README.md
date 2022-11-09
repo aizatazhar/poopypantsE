@@ -5,9 +5,9 @@
 -   Start the Redis server with `redis-server`
 -   Run `node index.js`
 
-I first fetched 5000 photos from http://jsonplaceholder.typicode.com/photos and stored them locally using Mongoose. When fetching the photos, I used Redis to cache 5000 photos and retrieve them from the cache.
-
 ---
+
+I first fetched 5000 photos from http://jsonplaceholder.typicode.com/photos and stored them locally using Mongoose. When fetching the photos, I used Redis to cache 5000 photos and retrieve them from the cache.
 
 #### Response time before caching
 
